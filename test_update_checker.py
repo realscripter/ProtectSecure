@@ -45,7 +45,7 @@ def test_update_checker():
         else:
             print("   No update info available")
     else:
-        print("\n   ⚠️  No update found. This is expected if:")
+        print("\n   [WARNING] No update found. This is expected if:")
         print("      - No GitHub release exists yet")
         print("      - Or version.json shows same/older version")
         print("   To test: Create a GitHub release with tag v1.0.1 or higher")

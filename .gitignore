@@ -30,7 +30,7 @@ dist/
 *.pyc
 
 # Inno Setup
-Output/
+# Output/  # Commented out - we want to track Output/ in releases
 *.iss.bak
 
 # IDE
