@@ -731,7 +731,7 @@ class ProtectSecureApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("ProtectSecure - Ultimate Edition")
+        self.title("ProtectSecure")
         self.geometry("800x650")
 
         # Layout
@@ -755,7 +755,7 @@ class ProtectSecureApp(ctk.CTk):
         self.temp_view_dirs = []
         
         # Initialize update checker with GitHub repository
-        self.update_checker = UpdateChecker(repo_url="https://github.com/realscripter/ProtectSecure", current_version="1.0.0")
+        self.update_checker = UpdateChecker(repo_url="https://github.com/realscripter/ProtectSecure", current_version="1.0.1")
         
         # Check for updates in background (non-blocking)
         self.after(2000, self.check_for_updates_async)

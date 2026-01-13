@@ -3,7 +3,7 @@
 
 [Setup]
 AppName=ProtectSecure
-AppVersion=1.0.0
+AppVersion=1.0.1
 AppPublisher=ProtectSecure
 AppPublisherURL=https://github.com/yourusername/protectsecure
 DefaultDirName={autopf}\ProtectSecure
