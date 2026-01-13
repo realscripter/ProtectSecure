@@ -1,0 +1,9 @@
+cryptography
+psutil
+customtkinter
+Pillow
+opencv-python
+pygame
+packaging
+pyinstaller
+pyarmor
