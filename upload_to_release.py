@@ -96,7 +96,7 @@ def main():
     files_exist = check_files()
     
     if not files_exist:
-        print("\n⚠️  Some build files are missing!")
+        print("\n[WARNING] Some build files are missing!")
         print("Run 'python build.py' first to build the EXE and installer.")
         return
     
@@ -107,9 +107,9 @@ def main():
     create_release_instructions()
     
     if has_gh:
-        print("\n💡 Tip: You can use GitHub CLI (gh) to automate this process!")
+        print("\n[TIP] You can use GitHub CLI (gh) to automate this process!")
     else:
-        print("\n💡 Tip: Install GitHub CLI (gh) to automate release creation!")
+        print("\n[TIP] Install GitHub CLI (gh) to automate release creation!")
         print("   Download: https://cli.github.com/")
 
 if __name__ == "__main__":
