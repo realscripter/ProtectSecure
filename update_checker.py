@@ -46,14 +46,17 @@ class UpdateChecker:
                 except:
                     pass
                 
-                # Fallback: try to get version.json from raw content
-                raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/{self.version_file}"
-                try:
-                    with urllib.request.urlopen(raw_url, timeout=5) as response:
-                        data = json.loads(response.read().decode())
-                        return data.get("version", None)
-                except:
-                    pass
+                # Fallback: try to get version.json from raw content (try main and master branches)
+                for branch in ["main", "master"]:
+                    raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{self.version_file}"
+                    try:
+                        with urllib.request.urlopen(raw_url, timeout=5) as response:
+                            data = json.loads(response.read().decode())
+                            version = data.get("version", None)
+                            if version:
+                                return version
+                    except:
+                        continue
                     
         except Exception as e:
             print(f"Update check error: {e}")
