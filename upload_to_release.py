@@ -20,9 +20,9 @@ def check_files():
     for name, path in files.items():
         if os.path.exists(path):
             size = os.path.getsize(path) / (1024 * 1024)  # MB
-            print(f"✓ {name}: {path} ({size:.1f} MB)")
+            print(f"[OK] {name}: {path} ({size:.1f} MB)")
         else:
-            print(f"✗ {name}: {path} - NOT FOUND")
+            print(f"[MISSING] {name}: {path} - NOT FOUND")
             all_exist = False
     
     print("=" * 50)

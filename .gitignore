@@ -26,11 +26,11 @@ wheels/
 
 # PyArmor
 obfuscated/
-dist/
+dist/*.exe  # Exclude large EXE files (upload to releases instead)
 *.pyc
 
 # Inno Setup
-# Output/  # Commented out - we want to track Output/ in releases
+Output/*.exe  # Exclude large EXE files (upload to releases instead)
 *.iss.bak
 
 # IDE
