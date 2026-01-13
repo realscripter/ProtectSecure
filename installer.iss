@@ -38,5 +38,32 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\ProtectSecure"; Fi
 [Run]
 Filename: "{app}\ProtectSecure.exe"; Description: "{cm:LaunchProgram,ProtectSecure}"; Flags: nowait postinstall skipifsilent
 
+[Code]
+// Support for silent installation and automatic restart
+var
+  RestartApp: Boolean;
+
+procedure InitializeWizard();
+begin
+  RestartApp := False;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+  begin
+    // If running silently, mark to restart the application
+    if WizardSilent then
+    begin
+      RestartApp := True;
+    end;
+  end
+  else if (CurStep = ssDone) and RestartApp then
+  begin
+    // Restart the application after silent installation
+    Exec(ExpandConstant('{app}\ProtectSecure.exe'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
+  end;
+end;
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"

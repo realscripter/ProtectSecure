@@ -12,6 +12,7 @@ import webbrowser
 from usb_utils import get_usb_drives
 from crypto_utils import protect_process, unload_process, decrypt_file_to_memory, decrypt_secure_to_memory, try_unlock_pc_file, estimate_size, secure_delete_file, secure_delete_directory, MAGIC_HEADER, MAGIC_HEADER_PC, MAGIC_HEADER_BETTER
 from update_checker import UpdateChecker
+from auto_updater import AutoUpdater
 from PIL import Image, ImageTk
 import io
 import cv2
@@ -754,11 +755,16 @@ class ProtectSecureApp(ctk.CTk):
         
         self.temp_view_dirs = []
         
-        # Initialize update checker with GitHub repository
+        # Initialize auto-updater with GitHub repository
+        self.auto_updater = AutoUpdater(repo_url="https://github.com/realscripter/ProtectSecure", current_version="1.0.1")
         self.update_checker = UpdateChecker(repo_url="https://github.com/realscripter/ProtectSecure", current_version="1.0.1")
         
         # Check for updates in background (non-blocking)
         self.after(2000, self.check_for_updates_async)
+        
+        # Update download state
+        self.update_downloading = False
+        self.update_window = None
 
     def setup_protect_tab(self):
         # Clean Layout
@@ -1106,42 +1112,126 @@ class ProtectSecureApp(ctk.CTk):
         """Check for updates in background thread."""
         def check():
             try:
-                has_update, latest_version = self.update_checker.check_for_updates()
+                has_update, release_info = self.auto_updater.check_for_updates()
                 if has_update:
-                    # Show update notification
-                    self.after(0, lambda: self.show_update_alert(latest_version))
+                    # Show update notification with auto-install option
+                    self.after(0, lambda: self.show_update_alert(release_info))
             except Exception as e:
                 # Silently fail - don't interrupt user experience
                 pass
         
         threading.Thread(target=check, daemon=True).start()
     
-    def show_update_alert(self, latest_version):
-        """Show update alert dialog."""
-        update_info = self.update_checker.get_update_info()
+    def show_update_alert(self, release_info):
+        """Show update alert dialog with auto-install option."""
+        latest_version = release_info.get("version", "Unknown")
         
         message = f"New version available!\n\n"
-        message += f"Current: {self.update_checker.current_version}\n"
+        message += f"Current: {self.auto_updater.current_version}\n"
         message += f"Latest: {latest_version}\n\n"
         
-        if update_info and update_info.get("name"):
-            message += f"{update_info['name']}\n\n"
-        if update_info and update_info.get("body"):
+        if release_info.get("name"):
+            message += f"{release_info['name']}\n\n"
+        if release_info.get("body"):
             # Limit changelog length
-            changelog = update_info['body'][:500]
-            if len(update_info['body']) > 500:
+            changelog = release_info['body'][:500]
+            if len(release_info['body']) > 500:
                 changelog += "..."
             message += f"Changes:\n{changelog}\n\n"
         
-        message += "Would you like to download the update?"
+        message += "Would you like to download and install the update automatically?\n\n"
+        message += "(The application will restart after installation)"
         
-        if messagebox.askyesno("Update Available", message):
-            if update_info and update_info.get("url"):
+        response = messagebox.askyesno("Update Available", message)
+        
+        if response:
+            # Start automatic update process
+            self.start_auto_update(release_info)
+        else:
+            # Offer manual download
+            if release_info.get("url"):
                 import webbrowser
-                webbrowser.open(update_info["url"])
-            elif self.update_checker.repo_url:
-                import webbrowser
-                webbrowser.open(self.update_checker.repo_url)
+                webbrowser.open(release_info["url"])
+    
+    def start_auto_update(self, release_info):
+        """Start the automatic update process."""
+        if self.update_downloading:
+            messagebox.showwarning("Update in Progress", "An update is already being downloaded.")
+            return
+        
+        self.update_downloading = True
+        
+        # Create update progress window
+        self.update_window = ctk.CTkToplevel(self)
+        self.update_window.title("Updating ProtectSecure")
+        self.update_window.geometry("500x200")
+        self.update_window.attributes("-topmost", True)
+        
+        lbl_title = ctk.CTkLabel(self.update_window, text="Downloading Update...", font=("Arial", 16, "bold"))
+        lbl_title.pack(pady=20)
+        
+        self.update_progress = ctk.CTkProgressBar(self.update_window)
+        self.update_progress.set(0)
+        self.update_progress.pack(pady=10, padx=20, fill="x")
+        
+        self.update_status = ctk.CTkLabel(self.update_window, text="Connecting...", font=("Arial", 12))
+        self.update_status.pack(pady=10)
+        
+        btn_cancel = ctk.CTkButton(self.update_window, text="Cancel", command=self.cancel_update, fg_color="gray")
+        btn_cancel.pack(pady=10)
+        
+        # Start download in background thread
+        threading.Thread(target=self.download_and_install_update, args=(release_info,), daemon=True).start()
+    
+    def download_and_install_update(self, release_info):
+        """Download and install the update."""
+        try:
+            # Download update
+            def progress_callback(percent, status):
+                if self.update_window and self.update_window.winfo_exists():
+                    self.after(0, lambda: self.update_progress.set(percent / 100.0))
+                    self.after(0, lambda: self.update_status.configure(text=status))
+            
+            setup_path = self.auto_updater.download_update(release_info, progress_callback)
+            
+            if not setup_path:
+                self.after(0, lambda: messagebox.showerror("Update Failed", "Failed to download update. Please try downloading manually."))
+                self.after(0, lambda: self.close_update_window())
+                self.update_downloading = False
+                return
+            
+            # Update status
+            if self.update_window and self.update_window.winfo_exists():
+                self.after(0, lambda: self.update_status.configure(text="Installing update..."))
+                self.after(0, lambda: self.update_progress.set(1.0))
+            
+            # Install update (silent mode)
+            if self.auto_updater.install_update(setup_path, silent=True):
+                # Close application - installer will restart it
+                self.after(1000, lambda: self.quit())
+            else:
+                self.after(0, lambda: messagebox.showerror("Update Failed", "Failed to start installer. Please run it manually."))
+                self.after(0, lambda: self.close_update_window())
+                self.update_downloading = False
+                
+        except Exception as e:
+            self.after(0, lambda: messagebox.showerror("Update Error", f"An error occurred during update: {str(e)}"))
+            self.after(0, lambda: self.close_update_window())
+            self.update_downloading = False
+            self.auto_updater.cleanup()
+    
+    def cancel_update(self):
+        """Cancel the update process."""
+        if messagebox.askyesno("Cancel Update", "Are you sure you want to cancel the update?"):
+            self.update_downloading = False
+            self.auto_updater.cleanup()
+            self.close_update_window()
+    
+    def close_update_window(self):
+        """Close the update progress window."""
+        if self.update_window and self.update_window.winfo_exists():
+            self.update_window.destroy()
+        self.update_window = None
 
 if __name__ == "__main__":
     app = ProtectSecureApp()
